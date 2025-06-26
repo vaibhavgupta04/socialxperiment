@@ -10,9 +10,6 @@ import (
 	"github.com/gopro/internal/models"
 )
 
-// In-memory poll store for demo (replace with DB in production)
-var pollStore = map[string]Poll{}
-
 type Poll struct {
 	ID          string    `json:"id"`
 	Title       string    `json:"title"`
@@ -25,14 +22,16 @@ type Poll struct {
 
 func CreatePoll(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Only allow if user is authenticated (JWT set user_id)
 		userID := c.Locals("user_id")
-		if userID == nil {
-			return fiber.ErrUnauthorized
+		userIDStr := "00000000-0000-0000-0000-000000000000"
+		if userID != nil {
+			if s, ok := userID.(string); ok {
+				userIDStr = s
+			}
 		}
 
 		var req struct {
-			WebsiteID   string   `json:"website_id"`
+			PollName   string   `json:"poll_name"`
 			Title       string   `json:"title"`
 			Description string   `json:"description"`
 			Options     []string `json:"options"`
@@ -47,10 +46,10 @@ func CreatePoll(db *gorm.DB) fiber.Handler {
 		pollID := uuid.New()
 		poll := models.Poll{
 			ID:          pollID,
-			WebsiteID:   req.WebsiteID,
+			WebsiteID:   req.PollName,
 			Title:       req.Title,
 			Description: req.Description,
-			CreatedBy:   userID.(string),
+			CreatedBy:   userIDStr,
 			CreatedAt:   time.Now(),
 		}
 		if err := db.Create(&poll).Error; err != nil {
@@ -74,34 +73,35 @@ func CreatePoll(db *gorm.DB) fiber.Handler {
 			"created_at":  poll.CreatedAt,
 			"description": poll.Description,
 			"options":     req.Options,
+			"created_by":  userIDStr,
+			"poll_name":   req.PollName,
 		})
 	}
 }
 
-
 type UserVoteInfo struct {
-    PhoneNumber string `json:"phone_number"`
-    OptionText  string `json:"option_text"`
+	PhoneNumber string `json:"phone_number"`
+	OptionText  string `json:"option_text"`
 }
 
 func GetPollData(db *gorm.DB) fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        pollID := c.Params("poll_id")
-        if pollID == "" {
-            return fiber.NewError(fiber.StatusBadRequest, "Missing poll_id")
-        }
+	return func(c *fiber.Ctx) error {
+		pollID := c.Params("poll_id")
+		if pollID == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Missing poll_id")
+		}
 
-        var results []UserVoteInfo
-        err := db.Table("votes").
-            Select("users.identifier as phone_number, poll_options.option_text").
-            Joins("JOIN users ON users.id = votes.user_id").
-            Joins("JOIN poll_options ON poll_options.id = votes.option_id").
-            Where("votes.poll_id = ?", pollID).
-            Scan(&results).Error
-        if err != nil {
-            return fiber.NewError(fiber.StatusInternalServerError, "Failed to fetch votes")
-        }
+		var results []UserVoteInfo
+		err := db.Table("votes").
+			Select("users.identifier as phone_number, poll_options.option_text").
+			Joins("JOIN users ON users.id = votes.user_id").
+			Joins("JOIN poll_options ON poll_options.id = votes.option_id").
+			Where("votes.poll_id = ?", pollID).
+			Scan(&results).Error
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to fetch votes")
+		}
 
-        return c.JSON(results)
-    }
+		return c.JSON(results)
+	}
 }

@@ -10,14 +10,18 @@ import (
 
 type CastVoteRequest struct {
     OptionID string `json:"option_id"`
+    UserID   string `json:"user_id"`
 }
 
 func CastVote(db *gorm.DB) fiber.Handler {
     return func(c *fiber.Ctx) error {
-        userID := c.Locals("user_id")
-        if userID == nil {
-            return fiber.ErrUnauthorized
-        }
+       userID := c.Locals("user_id")
+		userIDStr := "00000000-0000-0000-0000-000000000000"
+		if userID != nil {
+			if s, ok := userID.(string); ok {
+				userIDStr = s
+			}
+		}
         pollIDStr := c.Params("poll_id")
         if pollIDStr == "" {
             return fiber.NewError(fiber.StatusBadRequest, "Missing poll_id")
@@ -34,10 +38,10 @@ func CastVote(db *gorm.DB) fiber.Handler {
         if err != nil {
             return fiber.NewError(fiber.StatusBadRequest, "Invalid option_id")
         }
-        userUUID, err := uuid.Parse(userID.(string))
-        if err != nil {
-            return fiber.ErrUnauthorized
-        }
+        // userUUID, err := uuid.Parse(userID.(string))
+        // if err != nil {
+        //     return fiber.ErrUnauthorized
+        // }
 
         // Ensure the option belongs to the poll
         var option models.PollOption
@@ -46,6 +50,15 @@ func CastVote(db *gorm.DB) fiber.Handler {
         }
 
         // Insert vote, handle unique constraint violation for (poll_id, user_id)
+        var userUUID uuid.UUID
+        if userIDStr == "anonymous" {
+            userUUID = uuid.Nil
+        } else {
+            userUUID, err = uuid.Parse(userIDStr)
+            if err != nil {
+                return fiber.NewError(fiber.StatusBadRequest, "Invalid user_id")
+            }
+        }
         vote := models.Vote{
             ID:       uuid.New(),
             PollID:   pollID,
@@ -60,6 +73,6 @@ func CastVote(db *gorm.DB) fiber.Handler {
             return fiber.NewError(fiber.StatusInternalServerError, "Failed to cast vote")
         }
 
-        return c.JSON(fiber.Map{"message": "Vote cast successfully"})
+        return c.JSON(fiber.Map{"message": "Vote cast successfully", "poll_id": pollIDStr, "option_id": req.OptionID, "user_id": userIDStr,})
     }
 }

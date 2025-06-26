@@ -24,6 +24,7 @@ func InitPostgres(cfg *config.Config) *gorm.DB {
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
         host, port, user, password, dbname,
     )
+	fmt.Println("Connecting to Postgres with DSN:", dsn)
 
     db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
         PrepareStmt: true, // Caches prepared statements for high concurrency

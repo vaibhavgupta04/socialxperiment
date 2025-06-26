@@ -32,9 +32,9 @@ func main() {
 	app.Post("/send-otp", handlers.SendOTP(rdb))
 	app.Post("/verify-otp", handlers.VerifyOTP(rdb))
 
-	secure := app.Group("/secure", middleware.JWTMiddleware())
-	secure.Post("/create-poll", handlers.CreatePoll(pgdb))
-	secure.Post("/polls/:poll_id/vote", handlers.CastVote(pgdb))
+	// secure := app.Group("/secure", middleware.JWTMiddleware())
+	app.Post("/create-poll", handlers.CreatePoll(pgdb))
+	app.Post("/polls/:poll_id/vote", handlers.CastVote(pgdb))
 	
 
 	app.Get(("polls/:poll_id"), handlers.GetPollData(pgdb))

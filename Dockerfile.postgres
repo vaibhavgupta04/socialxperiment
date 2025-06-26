@@ -1,8 +1,9 @@
 FROM postgres:latest
 
-ENV POSTGRES_USER="admin"
-ENV POSTGRES_PASSWORD="admin"
-ENV POSTGRES_DB="socex"
+ENV POSTGRES_USER=admin
+ENV POSTGRES_PASSWORD=admin
+ENV POSTGRES_DB=socex
+
 # Expose the default  Postgres port
 EXPOSE 5432 5432
 
