@@ -7,15 +7,10 @@ services:
     depends_on:
       - postgres
       - kafka
+      - redis
     environment:
       - KAFKA_BROKER=kafka:9092
       - POSTGRES_DSN=postgres://user:password@postgres:5432/votedb?sslmode=disable
-
-  # worker:
-  #   build: .
-  #   depends_on:
-  #     - redis
-
   postgres:
     image: postgres:14
     environment:
@@ -45,4 +40,10 @@ services:
     ports:
       - "8123:8123"
       - "9000:9000"
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"
 

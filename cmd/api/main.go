@@ -29,15 +29,19 @@ func main() {
 		Max:        5000,
 		Expiration: 1 * 60 * 1000000000,
 	}))
-	app.Post("/send-otp", handlers.SendOTP(rdb))
-	app.Post("/verify-otp", handlers.VerifyOTP(rdb))
+
+	app.Post("/auth/request", handlers.RequestOTP(rdb, pgdb))
+	app.Post("/auth/callback", handlers.OTPCallback(rdb))
+	app.Post("/success", handlers.OTPSuccess(rdb, pgdb))
+	app.Post("/failure", handlers.OTPFailure(rdb))
 
 	// secure := app.Group("/secure", middleware.JWTMiddleware())
-	app.Post("/create-poll", handlers.CreatePoll(pgdb))
-	app.Post("/polls/:poll_id/vote", handlers.CastVote(pgdb))
+	app.Post("/create", handlers.CreatePoll(rdb, pgdb))
+	app.Post("/poll/:poll_id", handlers.GetPoll(rdb, pgdb))
+	app.Post("/vote/:poll_id", handlers.CastPoll(rdb, pgdb))
 	
 
-	app.Get(("polls/:poll_id"), handlers.GetPollData(pgdb))
+	app.Get(("polldata/:poll_id"), handlers.GetPollData(pgdb))
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})

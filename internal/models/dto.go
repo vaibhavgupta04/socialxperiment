@@ -35,6 +35,7 @@ type Poll struct {
     CreatedBy   string
     CreatedAt   time.Time
     Options     []PollOption `gorm:"foreignKey:PollID"`
+    ShareableLink string `gorm:"type:varchar(255);unique"`
 }
 
 type PollOption struct {
