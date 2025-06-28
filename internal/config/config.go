@@ -51,7 +51,7 @@ func LoadEnv() *Config {
 		RedisApiKey:       getEnv("REDIS_API_KEY", ""),
 		RedisUser:         getEnv("REDIS_USERNAME", "default"),
 		RedisPassword:     getEnv("REDIS_PASSWORD", "default"),
-		JWTSecret:         getEnv("JWT_SECRET", "supersecret"),
+		JWTSecret:         getEnv("JWT_SECRET", "e1a537ff08c234a24b1cfe9328e2a70e7a36b6d03f7265d49ab03ecf1fa5a3cc"),
 		JWTTTL:            jwtTTL,
 		SMTPHost:          getEnv("SMTP_HOST", ""),
 		SMTPPort:          port,
@@ -66,6 +66,7 @@ func LoadEnv() *Config {
 		PGUser:     getEnv("PG_USER", "postgres"),
 		PGPassword: getEnv("PG_PASSWORD", ""),
 		PGDBName:   getEnv("PG_DBNAME", "postgres"),
+
 	}
 	return cfg
 }

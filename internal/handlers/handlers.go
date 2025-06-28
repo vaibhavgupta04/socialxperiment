@@ -2,15 +2,13 @@ package handlers
 
 import (
 	"time"
-
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
-
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/gopro/internal/models"
@@ -263,32 +261,52 @@ func RequestOTP(rdb *redis.Client, db *gorm.DB) fiber.Handler {
 			return fiber.NewError(fiber.StatusInternalServerError, "Invalid OTP service response")
 		}
 
-		// Return the OTP link and info
 		return c.JSON(result)
 	}
 }
 
 func OTPCallback(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var payload struct {
-			OtpID      string `json:"otp_id"`
-			AuthStatus string `json:"auth_status"`
-			Phone      string `json:"phone_sms"`
-			OtpSecret  string `json:"otp_secret"`
+		var req struct {
+			Phone       string `json:"phone_sms"`
+			AuthStatus  string `json:"auth_status"`
+			OtpID       string `json:"otp_id"`
+			OtpSecret   string `json:"otp_secret"`
+			Metadata    string `json:"metadata"`
 		}
-		if err := c.BodyParser(&payload); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid callback payload")
+		if err := c.BodyParser(&req); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid callback req")
 		}
-		if payload.AuthStatus != "verified" {
-			return c.SendStatus(fiber.StatusOK) // Skip if not verified
+		if req.AuthStatus != "verified" {
+			return c.SendStatus(fiber.StatusOK)
+		}else{
+			c.SendStatus(fiber.StatusUnauthorized)
 		}
-		// Save session
-		sessionKey := fmt.Sprintf("otp:verified:%s", payload.Phone)
-		err := rdb.Set(context.TODO(), sessionKey, "1", 10*time.Minute).Err()
+
+		// Generate JWT
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"phone": req.Phone,
+			"exp":   time.Now().Add(15 * time.Minute).Unix(),
+		})
+		tokenStr, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to store session")
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to generate token")
 		}
-		return c.SendStatus(fiber.StatusOK)
+
+		// Save token in Redis with expiration (15 minutes)
+		ctx := c.Context()
+        err = rdb.Set(ctx, req.Phone, tokenStr, 15*time.Minute).Err()
+        if err != nil {
+            return fiber.NewError(fiber.StatusInternalServerError, "Failed to save token in Redis")
+        }
+		return c.JSON(fiber.Map{
+			"token": tokenStr,
+			"Phone": req.Phone,
+			"auth_status": req.AuthStatus,
+			"otp_id": req.OtpID,
+			"otp_secret": req.OtpSecret,
+			"metadata": req.Metadata,	
+		})
 	}
 }
 

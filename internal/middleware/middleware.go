@@ -3,7 +3,6 @@ package middleware
 import (
     "github.com/gofiber/fiber/v2"
     "github.com/gofiber/fiber/v2/middleware/cors"
-    "github.com/gopro/internal/token"
     "github.com/redis/go-redis/v9"
     "context"
     "fmt"
@@ -17,36 +16,6 @@ func CORSMiddleware() fiber.Handler {
         AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
     })
 }
-
-// JWT middleware: checks for Authorization header and validates JWT
-func JWTMiddleware() fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        tokenString := c.Get("Authorization")
-        if tokenString == "" {
-            return fiber.ErrUnauthorized
-        }
-        userID, userAttr, err := token.ValidateAndExtract(tokenString)
-        if err != nil {
-            return fiber.ErrUnauthorized
-        }
-        c.Locals("user_id", userID)
-        c.Locals("user_attr", userAttr)
-        return c.Next()
-    }
-}
-
-// Example: Placeholder for another middleware
-func ExampleMiddleware() fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        // Do something before
-        err := c.Next()
-        // Do something after
-        return err
-    }
-}
-
-
-
 
 func RequireOTP(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
